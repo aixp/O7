@@ -7,4 +7,4 @@ Subsystems:
 
 [Some notes](http://obertone.ru/ob/o7) (in Russian)
 
-Alexander V. Shiryaev, 2019
+Alexander V. Shiryaev, 2020
