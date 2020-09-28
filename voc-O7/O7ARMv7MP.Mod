@@ -23,8 +23,10 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 			newsf = 0;
 			defopt = {newsf};
 
+(*
 		(* DevCompiler: additional scanner types *)
 			import = 100; module = 101; semicolon = 102; becomes = 103; comEnd = 104;
+*)
 
 	TYPE PtrBase = POINTER TO PtrBaseDesc;
 		PtrBaseDesc = RECORD	(*list of names of pointer base types*)

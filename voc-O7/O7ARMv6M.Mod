@@ -9,11 +9,6 @@ http://ecee.colorado.edu/ecen3000/labs/lab3/files/DDI0419C_arm_architecture_v6m_
 
 	IMPORT SYSTEM, Strings := VT100, Out;
 
-(*
-	TYPE
-		LONGINT = INTEGER;
-*)
-
 	CONST
 		(* registers *)
 			R0* = 0; R1* = 1; R2* = 2; R3* = 3;
@@ -153,23 +148,9 @@ http://ecee.colorado.edu/ecen3000/labs/lab3/files/DDI0419C_arm_architecture_v6m_
 		code[pc] := 4380H + m * 8 + dn; INC(pc)
 	END EmitBICSR;
 
-(*
 	PROCEDURE DecodeBLabel24* (S, imm10, J1, J2, imm11: INTEGER): INTEGER;
 	BEGIN
 		RETURN ((S * 1000000H + (J1 + S + 1) MOD 2 * 800000H + (J2 + S + 1) MOD 2 * 400000H + imm10 * 1000H + imm11 * 2) * 80H) DIV 80H
-	END DecodeBLabel24;
-*)
-
-	PROCEDURE DecodeBLabel24* (S, imm10, J1, J2, imm11: INTEGER): INTEGER;
-		VAR t0, t1, t2, t3, t4, t5: INTEGER;
-	BEGIN
-		t0 := S * 1000000H;
-		t1 := ((J1 + S + 1) MOD 2) * 800000H;
-		t2 := ((J2 + S + 1) MOD 2) * 400000H;
-		t3 := imm10 * 1000H;
-		t4 := imm11 * 2;
-		t5 := (t0 + t1 + t2 + t3 + t4) * 80H;
-		RETURN t5 DIV 80H
 	END DecodeBLabel24;
 
 	PROCEDURE EncodeBLabel24* (off: INTEGER; (*OUT*)VAR S, imm10, J1, J2, imm11: INTEGER);
