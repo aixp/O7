@@ -8,6 +8,6 @@ Oberon → ARMv{6,7E}-M compiler, based on N. Wirth [Project Oberon](http://
 [Ѵishap Oberon](https://github.com/vishaps/voc) version:
 * [O7](voc-O7): compiler, linker
 
-[Some notes](http://obertone.ru/ob/o7) (in Russian)
+[Some notes](https://wiki.oberon.org/ob/o7) (in Russian)
 
 Alexander V. Shiryaev, 2020
