@@ -189,12 +189,12 @@ static inline INT32 SYSTEM_ASH(INT32 x, INT32 n) {return __ASH(x,n);}
 #define __MOVE(s, d, n) memcpy((char*)(ADDRESS)(d),(char*)(ADDRESS)(s),n)
 
 
-extern INT32 SYSTEM_DIV(INT32 x, INT32 y);
+extern INT64 SYSTEM_DIV(INT64 x, INT64 y);
 #define __DIVF(x, y) SYSTEM_DIV(x, y)
 #define __DIV(x, y) (((x)>0 && (y)>0) ? (x)/(y) : __DIVF(x, y))
 
 
-extern INT32 SYSTEM_MOD(INT32 x, INT32 y);
+extern INT64 SYSTEM_MOD(INT64 x, INT64 y);
 #define __MODF(x, y) SYSTEM_MOD(x, y)
 #define __MOD(x, y) (((x)>0 && (y)>0) ? (x)%(y) : __MODF(x, y))
 
