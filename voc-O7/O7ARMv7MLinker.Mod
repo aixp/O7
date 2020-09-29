@@ -21,9 +21,6 @@ MODULE O7ARMv7MLinker;
 
 	TYPE
 		LONGINT = INTEGER;
-		(* REAL = SHORTREAL; *)
-		LONGREAL = REAL;
-		(* BYTE = SHORTCHAR; *)
 		BYTE = CHAR;
 
 	CONST versionkey = 1X; MT = 6; SB = 3;

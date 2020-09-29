@@ -10,9 +10,6 @@ MODULE O7B;	(*NW 25.6.2014  / 1.3.2019  in Oberon-07*)
 
 	TYPE
 		LONGINT = INTEGER;
-		(* REAL = SHORTREAL; *)
-		LONGREAL = REAL;
-		(* BYTE = SHORTCHAR; *)
 		BYTE = CHAR;
 
 	CONST versionkey* = 1; maxTypTab = 64;

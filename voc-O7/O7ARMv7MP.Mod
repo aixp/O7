@@ -13,9 +13,6 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 
 	TYPE
 		LONGINT = INTEGER;
-		(* REAL = SHORTREAL; *)
-		LONGREAL = REAL;
-		(* BYTE = SHORTCHAR; *)
 		BYTE = CHAR;
 
 	TYPE PtrBase = POINTER TO PtrBaseDesc;

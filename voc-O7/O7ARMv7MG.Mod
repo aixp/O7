@@ -52,10 +52,6 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 
 	TYPE
 		LONGINT = INTEGER;
-		(* REAL = SHORTREAL; *)
-		LONGREAL = REAL;
-		(* CHAR = SHORTCHAR; *)
-		(* BYTE = SHORTCHAR; *)
 		BYTE = CHAR;
 
 	CONST WordSize* = 4;

@@ -11,9 +11,6 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 
 	TYPE
 		LONGINT = INTEGER;
-		(* REAL = SHORTREAL; *)
-		LONGREAL = REAL;
-		(* BYTE = SHORTCHAR; *)
 		BYTE = CHAR;
 
 	VAR W: Texts.Writer;

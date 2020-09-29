@@ -13,10 +13,6 @@ MODULE O7S; (* NW 19.9.93 / 20.3.2017	Scanner in Oberon-07*)
 
 	TYPE
 		LONGINT = INTEGER;
-		(* REAL = SHORTREAL; *)
-		LONGREAL = REAL;
-		(* CHAR = SHORTCHAR; *)
-		(* BYTE = SHORTCHAR; *)
 		BYTE = CHAR;
 
 	CONST IdLen* = 32;
