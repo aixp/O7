@@ -2746,7 +2746,3 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 BEGIN
 	relmap[0] := 1; relmap[1] := 9; relmap[2] := 5; relmap[3] := 6; relmap[4] := 14; relmap[5] := 13
 END O7ARMv7MG.
-
-(!)DevCompiler.CompileThis O7Files O7Texts O7Oberon O7S O7B O7ARMv6M O7ARMv7M O7ARMv7MG (!)
-
-(!)DevDebug.UnloadThis O7ARMv7MLinker O7ARMv7MTool O7ARMv7MP O7ARMv7MG O7ARMv7M O7ARMv6M O7B O7S O7Oberon O7Texts O7Files (!)

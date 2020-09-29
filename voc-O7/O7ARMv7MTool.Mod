@@ -82,10 +82,10 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 			name: ARRAY 32 OF CHAR;
 			F: Files.File; R: Files.Rider;
 			S: Texts.Scanner;
-	BEGIN (*Oberon.GetPar;*) Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+	BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
 		IF S.class = Texts.Name THEN
 			Texts.WriteString(W, "OR-decode "); Texts.WriteString(W, S.s);
-			Texts.WriteLn(W); Texts.Append(Oberon.Log(**), W.buf);
+			Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
 			F := Files.Old(S.s);
 			IF F # NIL THEN
 				Files.Set(R, F, 0); ReadInt(R, k); ReadInt(R, k);
@@ -105,14 +105,14 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 						ELSIF (class = ORB.Const) OR (class = ORB.Var) THEN
 							Files.ReadNum(R, k); Texts.WriteInt(W, k, 5);	(*Reals, Strings!*)
 						END ;
-						Texts.WriteLn(W); Texts.Append(Oberon.Log(**), W.buf);
+						Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
 						Read(R, class)
 					END
 				ELSE Texts.WriteString(W, " bad symfile version")
 				END
 			ELSE Texts.WriteString(W, " not found")
 			END ;
-			Texts.WriteLn(W); Texts.Append(Oberon.Log(**), W.buf)
+			Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 		END;
 		(*Oberon.Collect(0)*)
 	END DecSym;
@@ -144,7 +144,7 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 			F: Files.File; R: Files.Rider;
 			S: Texts.Scanner;
 			d: INTEGER; (* ARMv7-M decoder state *)
-	BEGIN (*Oberon.GetPar;*) Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+	BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
 		IF S.class = Texts.Name THEN
 			Texts.WriteString(W, "decode "); Texts.WriteString(W, S.s); F := Files.Old(S.s);
 			IF F # NIL THEN
@@ -203,7 +203,7 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 			(* Sync(R); *)
 			ELSE Texts.WriteString(W, " not found"); Texts.WriteLn(W)
 			END ;
-			Texts.Append(Oberon.Log(**), W.buf)
+			Texts.Append(Oberon.Log, W.buf)
 		END;
 		(*Oberon.Collect(0)*)
 	END DecObj;
@@ -223,7 +223,7 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 		END Read;
 
 	BEGIN
-		(*Oberon.GetPar;*) Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+		Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
 		IF S.class = Texts.Name THEN
 			Texts.WriteString(W, "decode "); Texts.WriteString(W, S.s); Texts.WriteLn(W); F := Files.Old(S.s);
 			IF F # NIL THEN
@@ -236,7 +236,7 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 					Texts.WriteLn(W) END
 			ELSE Texts.WriteString(W, " not found"); Texts.WriteLn(W)
 			END;
-			Texts.Append(Oberon.Log(**), W.buf)
+			Texts.Append(Oberon.Log, W.buf)
 		END;
 		(*Oberon.Collect(0)*)
 	END DecBin;
@@ -333,7 +333,7 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 		END Line;
 
 	BEGIN
-		(*Oberon.GetPar;*) Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+		Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
 		IF S.class = Texts.Name THEN
 			Texts.WriteString(W, "decode "); Texts.WriteString(W, S.s); Texts.WriteLn(W); F := Files.Old(S.s);
 			IF F # NIL THEN
@@ -342,11 +342,11 @@ MODULE O7ARMv7MTool;	(*NW 18.2.2013*)
 				IF ~eof THEN Err("EOF expected") END; CheckD
 			ELSE Texts.WriteString(W, " not found"); Texts.WriteLn(W)
 			END;
-			Texts.Append(Oberon.Log(**), W.buf)
+			Texts.Append(Oberon.Log, W.buf)
 		END;
 		(*Oberon.Collect(0)*)
 	END DecHex;
 
 BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "O7ARMv7MTool 19.9.2014");
-	Texts.WriteLn(W); Texts.Append(Oberon.Log(**), W.buf)
+	Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END O7ARMv7MTool.
