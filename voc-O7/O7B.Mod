@@ -385,7 +385,7 @@ MODULE O7B;	(*NW 25.6.2014  / 1.3.2019  in Oberon-07*)
 
 	PROCEDURE enter ((*IN*) name: ARRAY OF CHAR; cl: INTEGER; type: Type; n: LONGINT);
 		VAR obj: Object;
-	BEGIN NEW(obj); obj.name := name(*$*); obj.class := cl; obj.type := type; obj.val := n; obj.dsc := NIL;
+	BEGIN NEW(obj); obj.name := name; obj.class := cl; obj.type := type; obj.val := n; obj.dsc := NIL;
 		IF cl = Typ THEN type.typobj := obj END ;
 		obj.next := system; system := obj
 	END enter;

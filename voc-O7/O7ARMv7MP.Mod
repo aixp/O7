@@ -3,7 +3,7 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 	(* Translated for BlackBox by Alexander Shiryaev,
 		2016.05.07, 2017.09.26, 2019.10.21 *)
 
-	IMPORT ORS := O7S, ORB := O7B, ORG := O7ARMv7MG, Texts (*:= O7Texts*), Oberon (*:= O7Oberon*)(*, Kernel, Dialog, StdLog, DevCommanders, TextMappers, TextModels, TextViews, DevMarkers, TextControllers, Views, Files, StdDialog*);
+	IMPORT ORS := O7S, ORB := O7B, ORG := O7ARMv7MG, Texts (*:= O7Texts*), Oberon (*:= O7Oberon*);
 
 	(*Author: Niklaus Wirth, 2014.
 		Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -18,25 +18,10 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 		(* BYTE = SHORTCHAR; *)
 		BYTE = CHAR;
 
-	CONST
-		(* compiler options: *)
-			newsf = 0;
-			defopt = {newsf};
-
-(*
-		(* DevCompiler: additional scanner types *)
-			import = 100; module = 101; semicolon = 102; becomes = 103; comEnd = 104;
-*)
-
 	TYPE PtrBase = POINTER TO PtrBaseDesc;
 		PtrBaseDesc = RECORD	(*list of names of pointer base types*)
 			name: ORS.Ident; type: ORB.Type; next: PtrBase
 		END;
-
-(*
-	VAR
-		s: TextMappers.Scanner;
-*)
 
 	VAR sym: INTEGER;	 (*last symbol read*)
 		dc: LONGINT;		(*data counter*)
@@ -946,7 +931,7 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 			ORB.Init; ORB.OpenScope;
 			IF sym = ORS.ident THEN
 				ORS.CopyId(modid); ORS.Get(sym);
-				Texts.WriteString(W, modid); Texts.Append(Oberon.Log(**), W.buf)
+				Texts.WriteString(W, modid); Texts.Append(Oberon.Log, W.buf)
 			ELSE ORS.Mark("identifier expected")
 			END;
 			Check(ORS.semicolon, "no ;"); level := 0; exno := 1; key := 0;
@@ -975,7 +960,7 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 				Texts.WriteInt(W, ORG.pc, 6); Texts.WriteInt(W, dc, 6); Texts.WriteHex(W, key)
 			ELSE Texts.WriteLn(W); Texts.WriteString(W, "compilation FAILED")
 			END;
-			Texts.WriteLn(W); Texts.Append(Oberon.Log(**), W.buf);
+			Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
 			ORB.CloseScope; pbsList := NIL
 		ELSE ORS.Mark("must start with MODULE")
 		END
@@ -993,10 +978,10 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 		VAR beg, end, time: LONGINT;
 			T: Texts.Text;
 			S: Texts.Scanner;
-	BEGIN (*Oberon.GetPar;*) Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos);
+	BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos);
 		Texts.Scan(S);
 		IF S.class = Texts.Char THEN
-			(*
+(*
 			IF S.c = "@" THEN
 				Option(S); Oberon.GetSelection(T, beg, end, time);
 				IF time >= 0 THEN ORS.Init(T, beg); Module END
@@ -1010,13 +995,13 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 					END
 				END
 			END
-			*)
+*)
 		ELSE
 			WHILE S.class = Texts.Name DO
 				NEW(T); Texts.Open(T, S.s);
 				IF T.len > 0 THEN Option(S); ORS.Init(T, 0); Module
 				ELSE Texts.WriteString(W, S.s); Texts.WriteString(W, " not found");
-					Texts.WriteLn(W); Texts.Append(Oberon.Log(**), W.buf)
+					Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 				END;
 				IF (T.len # 0) & (ORS.errcnt = 0) THEN Texts.Scan(S) ELSE S.class := 0 END
 			END
@@ -1024,226 +1009,8 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 		(* Oberon.Collect(0) *)
 	END Compile;
 
-(*
-	(* DevCompiler *)
-
-		PROCEDURE Scan (VAR s: TextMappers.Scanner);
-		BEGIN
-			s.Scan;
-			IF s.type = TextMappers.string THEN
-				IF s.string = "MODULE" THEN s.type := module END
-			ELSIF s.type = TextMappers.char THEN
-				IF s.char = "(" THEN
-					IF s.rider.char = "*" THEN
-						s.rider.Read;
-						REPEAT Scan(s) UNTIL (s.type = TextMappers.eot) OR (s.type = comEnd);
-						Scan(s)
-					END
-				ELSIF s.char = "*" THEN
-					IF s.rider.char = ")" THEN s.rider.Read; s.type := comEnd END
-				END
-			END
-		END Scan;
-
-		PROCEDURE Do (source, log: TextModels.Model; beg: INTEGER; opt: SET; VAR error: BOOLEAN);
-			VAR s: TextMappers.Scanner;
-				str: Dialog.String;
-		BEGIN
-			(*
-			Dialog.MapString("#Dev:Compiling", str);
-			StdLog.String(str); StdLog.Char(" ");
-			s.ConnectTo(source); s.SetPos(beg);
-			Scan(s);
-			WHILE (s.type # TextMappers.eot) & (s.type # module) DO Scan(s) END;
-			IF s.type = module THEN
-				Scan(s);
-				IF s.type = TextMappers.string THEN
-					StdLog.Char('"'); StdLog.String(s.string); StdLog.Char('"')
-				END
-			END;
-			*)
-
-			(*
-			Module(sourceR, opt, log, error)
-			*)
-				ORS.Init(Texts.NewText(source), beg);
-				newSF := newsf IN opt;
-				Module;
-				error := ORS.errcnt # 0
-		END Do;
-
-		PROCEDURE Open;
-		BEGIN
-			Dialog.ShowStatus("#Dev:Compiling");
-			StdLog.buf.Delete(0, StdLog.buf.Length())
-		END Open;
-
-		PROCEDURE Close;
-		BEGIN
-			StdLog.text.Append(StdLog.buf);
-			TextViews.ShowRange(StdLog.text,
-				StdLog.text.Length(), StdLog.text.Length(), TextViews.any);
-			IF ORS.errcnt = 0 THEN Dialog.ShowStatus("#Dev:Ok")
-			END;
-			(* sourceR := NIL; *)
-			Kernel.Cleanup
-		END Close;
-
-		PROCEDURE Compile2*;
-			VAR t: TextModels.Model; error: BOOLEAN;
-		BEGIN
-			Open;
-			t := TextViews.FocusText();
-			IF t # NIL THEN
-				Do(t, StdLog.text, 0, defopt, error);
-				IF error THEN DevMarkers.ShowFirstError(t, TextViews.focusOnly) END
-			ELSE Dialog.ShowMsg("#Dev:NoTextViewFound")
-			END;
-			Close
-		END Compile2;
-
-		PROCEDURE CompileText* (text: TextModels.Model; beg: INTEGER; OUT error: BOOLEAN);
-		BEGIN
-			ASSERT(text # NIL, 20); ASSERT((beg >= 0) & (beg <= text.Length()), 21);
-			Open;
-			Do(text, StdLog.text, beg, defopt, error);
-			IF error THEN DevMarkers.ShowFirstError(text, TextViews.focusOnly) END;
-			Close
-		END CompileText;
-
-		PROCEDURE CompileSelection*;
-			VAR c: TextControllers.Controller; t: TextModels.Model; beg, end: INTEGER; error: BOOLEAN;
-		BEGIN
-			Open;
-			c := TextControllers.Focus();
-			IF c # NIL THEN
-				t := c.text;
-				IF c.HasSelection() THEN
-					c.GetSelection(beg, end); Do(t, StdLog.text, beg, defopt, error);
-					IF error THEN DevMarkers.ShowFirstError(t, TextViews.focusOnly) END
-				ELSE Dialog.ShowMsg("#Dev:NoSelectionFound")
-				END
-			ELSE Dialog.ShowMsg("#Dev:NoTextViewFound")
-			END;
-			Close
-		END CompileSelection;
-
-		PROCEDURE CompileList (beg, end: INTEGER; c: TextControllers.Controller);
-			VAR v: Views.View; i: INTEGER; error, one: BOOLEAN; name: Files.Name; loc: Files.Locator;
-				t: TextModels.Model; opts: SET;
-		BEGIN
-			s.SetPos(beg); s.Scan; one := FALSE;
-			WHILE (s.start < end) & (s.type = TextMappers.string) & (s.len < LEN(name)) DO
-				s.Scan; one := TRUE;
-				WHILE (s.start < end) & (s.type = TextMappers.char) &
-					((s.char = "-") OR (s.char = "+") OR
-					(s.char = "!") OR (s.char = "*") OR (s.char = "?") OR (s.char = "^") OR (s.char = "("))
-				DO
-					IF s.char = "(" THEN
-						WHILE (s.start < end) & ((s.type # TextMappers.char) OR (s.char # ")")) DO s.Scan END
-					END;
-					s.Scan
-				END
-			END;
-			IF one & (s.start >= end) THEN
-				s.SetPos(beg); s.Scan; error := FALSE;
-				WHILE (s.start < end) & (s.type = TextMappers.string) & ~error DO
-					i := 0; WHILE i < LEN(name) DO name[i] := 0X; INC(i) END;
-					StdDialog.GetSubLoc(s.string, "Mod", loc, name);
-					t := NIL;
-					IF loc # NIL THEN
-						v := Views.OldView(loc, name);
-						IF v # NIL THEN
-							WITH v: TextViews.View DO t := v.ThisModel()
-							ELSE Dialog.ShowParamMsg("#Dev:NoTextFileFound", name, "", ""); error := TRUE
-							END
-						ELSE Dialog.ShowParamMsg("#Dev:CannotOpenFile", name, "", ""); error := TRUE
-						END
-					ELSE Dialog.ShowParamMsg("#System:FileNotFound", name, "", ""); error := TRUE
-					END;
-					s.Scan; opts := defopt;
-					(*
-					WHILE (s.start < end) & (s.type = TextMappers.char) DO
-						IF s.char = "-" THEN
-							IF srcpos IN opts THEN EXCL(opts, srcpos)
-							ELSIF allref IN opts THEN EXCL(opts, allref)
-							ELSIF ref IN opts THEN EXCL(opts, ref)
-							ELSE EXCL(opts, obj)
-							END
-						ELSIF s.char = "!" THEN
-							IF assert IN opts THEN EXCL(opts, assert)
-							ELSE EXCL(opts, checks)
-							END
-						ELSIF s.char = "+" THEN INCL(opts, allchecks)
-						ELSIF s.char = "?" THEN INCL(opts, hint)
-						ELSIF s.char = "@" THEN INCL(opts, errorTrap)
-						ELSIF s.char = "$" THEN INCL(opts, oberon)
-						ELSIF s.char = "(" THEN
-							s.Scan;
-							WHILE (s.start < end) & (s.type = TextMappers.string) DO
-								title := s.string$; s.Scan;
-								IF (s.start < end) & (s.type = TextMappers.char) & (s.char = ":") THEN
-									s.Scan;
-									IF (s.start < end) & (s.type = TextMappers.string) THEN
-										entry := s.string$; s.Scan;
-										IF t # NIL THEN DevSelectors.ChangeTo(t, title, entry) END
-									END
-								END;
-								IF (s.start < end) & (s.type = TextMappers.char) & (s.char = ",") THEN s.Scan END
-							END
-						END;
-						s.Scan
-					END;
-					*)
-					IF t # NIL THEN
-						Do(t, StdLog.text, 0, opts, error)
-					END
-				END
-			ELSE Dialog.ShowMsg("#Dev:NotOnlyFileNames")
-			END;
-			s.ConnectTo(NIL);
-			IF error & (c # NIL) & c.HasSelection() & (s.start < end) THEN
-				c.SetSelection(s.start, end)
-			END;
-			IF error & (v # NIL) THEN
-				Views.Open(v, loc, name, NIL);
-				DevMarkers.ShowFirstError(t, TextViews.any)
-			END
-		END CompileList;
-
-		PROCEDURE CompileModuleList*;
-			VAR c: TextControllers.Controller; beg, end: INTEGER;
-		BEGIN
-			Open;
-			c := TextControllers.Focus();
-			IF c # NIL THEN
-				s.ConnectTo(c.text);
-				IF c.HasSelection() THEN c.GetSelection(beg, end)
-				ELSE beg := 0; end := c.text.Length()
-				END;
-				CompileList(beg, end, c)
-			ELSE Dialog.ShowMsg("#Dev:NoTextViewFound")
-			END;
-			Close
-		END CompileModuleList;
-
-		PROCEDURE CompileThis*;
-			VAR p: DevCommanders.Par; beg, end: INTEGER;
-		BEGIN
-			Open;
-			p := DevCommanders.par;
-			IF p # NIL THEN
-				DevCommanders.par := NIL;
-				s.ConnectTo(p.text); beg := p.beg; end := p.end;
-				CompileList(beg, end, NIL)
-			ELSE Dialog.ShowMsg("#Dev:NoTextViewFound")
-			END;
-			Close
-		END CompileThis;
-*)
-
 BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "Oberon -> ARMv7-M Compiler  8.2.2020");
-	Texts.WriteLn(W); Texts.Append(Oberon.Log(**), W.buf);
+	Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
 	NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
 	expression := expression0; Type := Type0; FormalType := FormalType0
 END O7ARMv7MP.

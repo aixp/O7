@@ -75,8 +75,7 @@ MODULE O7S; (* NW 19.9.93 / 20.3.2017	Scanner in Oberon-07*)
 	BEGIN p := Pos();
 		IF (p > errpos) & (errcnt < 25) THEN
 			Texts.WriteLn(W); Texts.WriteString(W, "  pos "); Texts.WriteInt(W, p, 1); Texts.Write(W, " ");
-			Texts.WriteString(W, msg); Texts.Append(Oberon.Log, W.buf);
-			(* DevMarkers.Insert(R.r.Base(), p, DevMarkers.dir.NewMsg(msg)) *)
+			Texts.WriteString(W, msg); Texts.Append(Oberon.Log, W.buf)
 		END ;
 		INC(errcnt); errpos := p + 4
 	END Mark;
@@ -277,13 +276,11 @@ MODULE O7S; (* NW 19.9.93 / 20.3.2017	Scanner in Oberon-07*)
 	END Get;
 
 	PROCEDURE Init* (T: Texts.Text; pos: LONGINT);
-	BEGIN errpos := pos; errcnt := 0; Texts.OpenReader(R, T, pos);
-(* DevMarkers.Unmark(R.r.Base()); *)
-Texts.Read(R, ch)
+	BEGIN errpos := pos; errcnt := 0; Texts.OpenReader(R, T, pos); Texts.Read(R, ch)
 	END Init;
 
 	PROCEDURE EnterKW (sym: INTEGER; (*IN*) name: ARRAY OF CHAR);
-	BEGIN keyTab[k].id := name(*$*); keyTab[k].sym := sym; INC(k)
+	BEGIN keyTab[k].id := name; keyTab[k].sym := sym; INC(k)
 	END EnterKW;
 
 BEGIN Texts.OpenWriter(W); k := 0; KWX[0] := 0; KWX[1] := 0;
