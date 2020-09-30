@@ -1,8 +1,8 @@
-MODULE O7ARMv7MLinker;
+MODULE O7ARMv6MLinker;
 
 	(* Link and load on RISC; NW 20.10.2013 / 8.1.2019 *)
 
-	(* ARMv7-M: Alexander Shiryaev, 2014.10, 2015.02, 2016.06, 2017.01, 2019.11 *)
+	(* ARMv6-M: Alexander Shiryaev, 2014.10, 2015.01, 2016.06, 2017.01, 2019.11 *)
 
 	(*
 		TODO:
@@ -17,7 +17,7 @@ MODULE O7ARMv7MLinker;
 			modules ptrs table stored in RAM for fast GC work
 	*)
 
-	IMPORT SYSTEM, Files (*:= O7Files*), Texts (*:= O7Texts*), Oberon (*:= O7Oberon*), ARMv6M := O7ARMv6M, ARMv7M := O7ARMv7M;
+	IMPORT SYSTEM, Files (*:= O7Files*), Texts (*:= O7Texts*), Oberon (*:= O7Oberon*), ARMv6M := O7ARMv6M;
 
 	TYPE
 		LONGINT = INTEGER;
@@ -114,7 +114,7 @@ MODULE O7ARMv7MLinker;
 			filename: ModuleName;
 	BEGIN i := 0;
 		WHILE name[i] # 0X DO filename[i] := name[i]; INC(i) END ;
-		filename[i] := "."; filename[i+1] := "a"; filename[i+2] := "7";
+		filename[i] := "."; filename[i+1] := "a"; filename[i+2] := "6";
 		filename[i+3] := "m"; filename[i+4] := 0X;
 		RETURN Files.Old(filename)
 	END ThisFile;
@@ -154,27 +154,6 @@ MODULE O7ARMv7MLinker;
 		END
 	END Check;
 
-	(* emit 2 instructions *)
-	PROCEDURE EmitADDSIm0 (VAR code: ARRAY OF INTEGER; VAR pc: INTEGER; a, b, im: INTEGER);
-		CONST S = 1;
-		VAR i, imm3, imm8: INTEGER; isMI: BOOLEAN;
-	BEGIN
-		ARMv7M.EncodeMI12(im, i, imm3, imm8, isMI);
-		IF isMI THEN
-			ASSERT(b # 15, 100);
-			ASSERT((b = 13) OR (a # 13), 101);
-			(* A7.7.3: ADD (immediate); encoding T3 ARMv7-M *)
-			(* A7.7.5: ADD (SP plus immediate); encoding T3 ARMv7-M *)
-				ARMv7M.EmitDPMI(code, pc, i, 16 + S, b, imm3, a, imm8)
-		ELSIF im <= 255 + 7 THEN
-			ARMv6M.EmitADDSIm(code, pc, a, b, 7);
-			ARMv6M.EmitADDSIm(code, pc, a, a, im - 7)
-		ELSE HALT(1)
-			(* fixup failed: offset is too big
-				(implementation limit) *)
-		END
-	END EmitADDSIm0;
-
 	(* search module in list; if not found, load module *)
 	PROCEDURE Load ((*IN*) VAR name: ARRAY OF CHAR; VAR newmod: Module);
 		VAR mod, impmod: Module;
@@ -187,11 +166,9 @@ MODULE O7ARMv7MLinker;
 			F: Files.File; R: Files.Rider;
 			import: ARRAY 16 OF Module;
 			a, b: INTEGER;
-			op: INTEGER; (* 0: LW, 1: LB, 2: ADDS, 3: SW, 4: SB, 5: VLDR *)
-			nxt: INTEGER;
+			op: INTEGER; (* 0: LW, 1: LB, 2: ADDS, 3: SW, 4: SB *)
 			ok: BOOLEAN;
-	BEGIN
-		mod := root; error(0, name); nofimps := 0;
+	BEGIN mod := root; error(0, name); nofimps := 0;
 		WHILE (mod # NIL) & ~CmpStr(name, mod.name) DO mod := mod.next END;
 		IF mod = NIL THEN (*load*)
 			Check(name);
@@ -356,39 +333,28 @@ MODULE O7ARMv7MLinker;
 					a := inst DIV 1000000H MOD 10H;
 					ASSERT(a = SB, 103);
 					ASSERT(inst DIV 10000000H MOD 10H = 8, 103); (* Ldr *)
-					ASSERT(flash[adr DIV 4 + 1] = 00FFFFFDH);
 
 					IF mno = 0 THEN (* global *)
 						i := adr DIV 4;
-						ARMv7M.EmitLWImW(flash, i, a, MT, mod.num * 4)
+						ARMv6M.EmitLDRIm(flash, i, a, MT, mod.num)
 					ELSE (* import *)
 						impmod := mod.imports[mno-1]; v := impmod.num;
-						i := adr DIV 4; ARMv7M.EmitLWImW(flash, i, a, MT, v * 4);
+						i := adr DIV 4; ARMv6M.EmitLDRIm(flash, i, a, MT, v);
 
-						inst := flash[adr DIV 4 + 2];
+						inst := flash[adr DIV 4 + 1];
 						vno := inst MOD 100H;
 						a := inst DIV 1000000H MOD 10H;
 						b := inst DIV 100000H MOD 10H; ASSERT(b = SB, 100);
-						nxt := flash[adr DIV 4 + 3];
 						CASE inst DIV 10000000H MOD 10H OF 4:
-							ASSERT(nxt = 00FFFFFFH);
-							IF inst DIV 10000H MOD 10H = 8 (* Add *) THEN op := 2
+							IF inst DIV 10000H MOD 10H = 8 (* Add *) THEN
+								ASSERT(flash[adr DIV 4 + 2] = 00FFFFFFH, 101);
+								op := 2
 							ELSE HALT(1)
 							END
-						| 8: (* Ldr *)
-							IF nxt = 00FFFFFFH THEN op := 0
-							ELSIF nxt = 00FFFFFCH THEN op := 5
-							ELSE HALT(2)
-							END
-						| 9: (* LdrB *)
-							ASSERT(nxt = 00FFFFFFH);
-							op := 1
-						| 10: (* Str *)
-							ASSERT(nxt = 00FFFFFFH);
-							op := 3
-						| 11: (* StrB *)
-							ASSERT(nxt = 00FFFFFFH);
-							op := 4
+						| 8: (* Ldr *) op := 0
+						| 9: (* LdrB *) op := 1
+						| 10: (* Str *) op := 3
+						| 11: (* StrB *) op := 4
 						END;
 
 						offset := impmod.entries[vno];
@@ -399,17 +365,28 @@ MODULE O7ARMv7MLinker;
 							HALT(126);
 							offset := offset - impmod.data
 						END;
-						i := adr DIV 4 + 2;
-						CASE op OF 0: ASSERT(offset MOD 4 = 0, 100);
-							ARMv7M.EmitLWImW(flash, i, a, b, offset)
-						| 1: ARMv7M.EmitLBImW(flash, i, a, b, offset)
+						i := adr DIV 4 + 1;
+						CASE op OF 0: ASSERT(offset MOD 4 = 0, 126);
+							ARMv6M.EmitLDRIm(flash, i, a, b, offset DIV 4)
+						| 1: ARMv6M.EmitLDRBIm(flash, i, a, b, offset)
 						| 2: ASSERT(a # b, 102);
-							EmitADDSIm0(flash, i, a, b, offset)
+							(* emit 2 instructions *)
+							IF offset DIV 8 = 0 THEN
+								ARMv6M.EmitADDSIm(flash, i, a, b, offset);
+								ARMv6M.EmitNOP(flash, i)
+							ELSIF offset DIV 100H = 0 THEN
+								ARMv6M.EmitMOVSR(flash, i, a, b);
+								ARMv6M.EmitADDSIm(flash, i, a, a, offset)
+							ELSIF offset <= 255 + 7 THEN
+								ARMv6M.EmitADDSIm(flash, i, a, b, 7);
+								ARMv6M.EmitADDSIm(flash, i, a, a, offset - 7)
+							ELSE HALT(1)
+								(* fixup failed: offset is too big
+									(implementation limit) *)
+							END
 						| 3: ASSERT(offset MOD 4 = 0, 126);
-							ARMv7M.EmitSWImW(flash, i, a, b, offset)
-						| 4: ARMv7M.EmitSBImW(flash, i, a, b, offset)
-						| 5: ASSERT(offset MOD 4 = 0);
-							ARMv7M.EmitVLDR(flash, i, a, b, 1, offset DIV 4)
+							ARMv6M.EmitSTRIm(flash, i, a, b, offset DIV 4)
+						| 4: ARMv6M.EmitSTRBIm(flash, i, a, b, offset)
 						END
 					END;
 					adr := adr - disp * 4
@@ -419,7 +396,7 @@ MODULE O7ARMv7MLinker;
 
 			ELSIF res >= 3 THEN COPY(name, importing);
 			WHILE nofimps > 0 DO DEC(nofimps) END
-			END
+			END 
 		END;
 		newmod := mod
 	END Load;
@@ -480,7 +457,7 @@ MODULE O7ARMv7MLinker;
 		IF F # NIL THEN
 			Files.Set(R, F, 0);
 			r := 0;
-
+			
 			IF codeLen > 0 THEN
 				offset := startAdr MOD 10000H;
 				startAdr := startAdr DIV 10000H MOD 10000H;
@@ -552,66 +529,55 @@ MODULE O7ARMv7MLinker;
 	END opcode;
 
 	(* R.a := im *)
-	(* see ARMv7MG.MovIm *)
+	(* see ARMv6MG.MovIm *)
 	PROCEDURE MovIm0 (VAR code: ARRAY OF INTEGER; VAR pc: INTEGER; a: INTEGER; im: INTEGER);
-		CONST S = 0;
 		VAR shift: INTEGER;
-			isLR: BOOLEAN;
-			imInv: INTEGER; isMI: BOOLEAN; i, imm3, imm8, imm4: INTEGER;
 	BEGIN
 		ASSERT(a IN {0..14}, 21);
 
-		isLR := a DIV 8 = 0;
-		IF isLR & (im DIV 100H = 0) THEN
-			ARMv6M.EmitMOVSIm(code, pc, a, im)
+		shift := 0;
+		WHILE (shift < 32) & ~(
+			(SYSTEM.LSH(im, -shift) DIV 100H = 0)
+			& (im = SYSTEM.LSH(SYSTEM.LSH(im, -shift), shift))
+		) DO INC(shift)
+		END;
+		IF shift < 32 THEN
+			ARMv6M.EmitMOVSIm(code, pc, a, SYSTEM.LSH(im, -shift));
+			IF shift # 0 THEN
+				ARMv6M.EmitLSLSIm(code, pc, a, a, shift)
+			END
+		ELSIF (im > 255) & (im <= 255 + 255) THEN
+			ARMv6M.EmitMOVSIm(code, pc, a, 255);
+			ARMv6M.EmitADDSIm(code, pc, a, a, im - 255)
+		ELSIF (im >= -255) & (im < 0) THEN
+			ARMv6M.EmitMOVSIm(code, pc, a, 0);
+			ARMv6M.EmitSUBSIm(code, pc, a, a, -im)
 		ELSE
-			ARMv7M.EncodeMI12(im, i, imm3, imm8, isMI);
-			IF isMI THEN
-				(* A7.7.75: MOV (immediate); encoding T2 ARMv7-M *)
-					ARMv7M.EmitDPMI(code, pc, i, 4 + S, 0FH, imm3, a, imm8)
-				(* S=1: N, Z, C will be updated *) (* NOTE: C *)
+			shift := 8;
+			WHILE (shift < 32) & (SYSTEM.ROT(im DIV 100H * 100H, -shift) DIV 100H # 0) DO INC(shift) END;
+			IF shift < 32 THEN
+				ASSERT(im =
+					SYSTEM.LSH(SYSTEM.ROT(im DIV 100H * 100H, -shift), shift)
+					+ im MOD 100H);
+				ARMv6M.EmitMOVSIm(code, pc, a, SYSTEM.ROT(im DIV 100H * 100H, -shift));
+				ARMv6M.EmitLSLSIm(code, pc, a, a, shift);
+				ARMv6M.EmitADDSIm(code, pc, a, a, im MOD 100H)
 			ELSE
-				imInv := ORDSET(BITS(im) / {0..31});
-				ARMv7M.EncodeMI12(imInv, i, imm3, imm8, isMI);
-				IF isMI THEN
-					(* A7.7.84: MVN (immediate); encoding T1 ARMv7-M *)
-						ARMv7M.EmitDPMI(code, pc, i, 6 + S, 0FH, imm3, a, imm8)
-						(* S=1: N, Z, C will be updated *) (* NOTE: C *)
-				ELSIF isLR & (im > 255) & (im <= 255 + 255) THEN
-					ARMv6M.EmitMOVSIm(code, pc, a, 255);
-					ARMv6M.EmitADDSIm(code, pc, a, a, im - 255)
-				ELSE
-					shift := 8;
-					WHILE (shift < 32) & (SYSTEM.ROT(im DIV 100H * 100H, -shift) DIV 100H # 0) DO INC(shift) END;
-					IF isLR & (shift < 32) THEN
-						ASSERT(im =
-							SYSTEM.LSH(SYSTEM.ROT(im DIV 100H * 100H, -shift), shift)
-							+ im MOD 100H);
-						ARMv6M.EmitMOVSIm(code, pc, a, SYSTEM.ROT(im DIV 100H * 100H, -shift));
-						ARMv6M.EmitLSLSIm(code, pc, a, a, shift);
-						ARMv6M.EmitADDSIm(code, pc, a, a, im MOD 100H)
-					ELSE
-						(* TODO: 3 ops: mov; (add, lsl), (lsl, sub), (lsl, sub) | MI12; add, lsl, sub *)
-						IF isLR & (im MOD 10000H DIV 100H = 0) THEN
-							ARMv6M.EmitMOVSIm(code, pc, a, im MOD 10000H)
-						ELSE
-							(* A7.7.75: MOV (immediate); encoding T3 ARMv7-M *)
-								imm4 := im DIV 1000H MOD 10H;
-								i := im DIV 800H MOD 2;
-								imm3 := im DIV 100H MOD 8;
-								imm8 := im MOD 100H;
-								ARMv7M.EmitDPPBI(code, pc, i, 4, imm4, imm3 * 1000H + a * 100H + imm8)
-						END;
-						im := im DIV 10000H;
-						IF im # 0 THEN
-							(* A7.7.78: MOVT; encoding T1 ARMv7 *)
-								imm4 := im DIV 1000H MOD 10H;
-								i := im DIV 800H MOD 2;
-								imm3 := im DIV 100H MOD 8;
-								imm8 := im MOD 100H;
-								ARMv7M.EmitDPPBI(code, pc, i, 12, imm4, imm3 * 1000H + a * 100H + imm8)
-						END
-					END
+				(* TODO: 3 ops: mov; (add, lsl), (lsl, sub), (lsl, sub) *)
+				ARMv6M.EmitMOVSIm(code, pc, a, im DIV 1000000H MOD 100H);
+				IF im DIV 1000000H MOD 100H # 0 THEN
+					ARMv6M.EmitLSLSIm(code, pc, a, a, 8)
+				END;
+				IF im DIV 10000H MOD 100H # 0 THEN
+					ARMv6M.EmitADDSIm(code, pc, a, a, im DIV 10000H MOD 100H)
+				END;
+				ARMv6M.EmitLSLSIm(code, pc, a, a, 8);
+				IF im DIV 100H MOD 100H # 0 THEN
+					ARMv6M.EmitADDSIm(code, pc, a, a, im DIV 100H MOD 100H)
+				END;
+				ARMv6M.EmitLSLSIm(code, pc, a, a, 8);
+				IF im MOD 100H # 0 THEN
+					ARMv6M.EmitADDSIm(code, pc, a, a, im MOD 100H)
 				END
 			END
 		END
@@ -631,9 +597,7 @@ MODULE O7ARMv7MLinker;
 
 	PROCEDURE StrIm0 (VAR code: ARRAY OF INTEGER; VAR pc: INTEGER; t, n, im: INTEGER);
 	BEGIN
-		IF im DIV 32 = 0 THEN ARMv6M.EmitSTRIm(code, pc, t, n, im)
-		ELSE ARMv7M.EmitSWImW(code, pc, t, n, im * 4)
-		END
+		ARMv6M.EmitSTRIm(code, pc, t, n, im)
 	END StrIm0;
 
 	PROCEDURE Link1 ((*IN*) VAR name: ARRAY OF CHAR);
@@ -1053,10 +1017,46 @@ MODULE O7ARMv7MLinker;
 		END
 	END EnterSAM;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv7MLinker 11.1.2017");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv6MLinker 11.1.2017");
 	Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
 
 	targets := NIL;
+
+	EnterNXP("LPC1114FBD48302", 32 (* Cortex-M0 *),
+		8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
+	EnterNXP("LPC1115", 32 (* Cortex-M0 *),
+		10000H (* 64 KiB *), 2000H (* 8 KiB *), 32);
+
+	(* 4 KiB of SRAM *)
+		EnterSTM("STM32F030", "CK", "6", 32, 200H, 1000H);
+		EnterSTM("STM32F030", "F", "4", 32, 200H, 1000H);
+		EnterSTM("STM32F031", "CFGK", "46", 32, 200H, 1000H);
+		EnterSTM("STM32F031", "E", "6", 32, 200H, 1000H);
+		EnterSTM("STM32F038", "CEFGK", "6", 32, 200H, 1000H);
+
+	(* 6 KiB of SRAM *)
+		EnterSTM("STM32F042", "CFGK", "46", 32, 200H, 1800H);
+		EnterSTM("STM32F042", "T", "6", 32, 200H, 1800H);
+		EnterSTM("STM32F048", "CGT", "6", 32, 200H, 1800H);
+		EnterSTM("STM32F070", "CF", "6", 32, 200H, 1800H);
+
+	(* 8 KiB of SRAM *)
+		EnterSTM("STM32F030", "CR", "8", 32, 200H, 2000H);
+		EnterSTM("STM32F051", "CKR", "468", 32, 200H, 2000H);
+		EnterSTM("STM32F051", "T", "8", 32, 200H, 2000H);
+		EnterSTM("STM32F058", "CRT", "8", 32, 200H, 2000H);
+
+	(* 16 KiB of SRAM *)
+		EnterSTM("STM32F070", "CR", "B", 32, 200H, 4000H);
+		EnterSTM("STM32F071", "CRV", "B", 32, 200H, 4000H);
+		EnterSTM("STM32F071", "V", "8", 32, 200H, 4000H);
+		EnterSTM("STM32F072", "CRV", "8B", 32, 200H, 4000H);
+		EnterSTM("STM32F078", "CRV", "B", 32, 200H, 4000H);
+
+	(* 32 KiB of SRAM *)
+		EnterSTM("STM32F030", "CR", "C", 32, 200H, 8000H);
+		EnterSTM("STM32F091", "CRV", "BC", 32, 200H, 8000H);
+		EnterSTM("STM32F098", "CRV", "C", 32, 200H, 8000H);
 
 	EnterNXP("LPC1311", 58, 2000H (* 8 KiB *), 1000H (* 4 KiB *), 32);
 	EnterNXP("LPC1313", 58, 8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
@@ -1088,7 +1088,7 @@ BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv7MLinker 11.1.2017");
 	EnterNXP("LPC1788", 41, 80000H (* 512 KiB *), 10000H (* 64 KiB *), 32);
 
 	(* no FPU *)
-		EnterNXP("LPC4072", 41, 10000H (* 64 KiB *), 4000H (* 16 KiB *), 32);
+		EnterNXP("LPC4072", 41, 10000H (* 64 KiB *), 4000H (* 16 KiB *), 32); 
 		EnterNXP("LPC4074", 41, 20000H (* 128 KiB *), 8000H (* 32 KiB *), 32);
 	EnterNXP("LPC4076", 41, 40000H (* 256 KiB *), 10000H (* 64 KiB *), 32);
 	EnterNXP("LPC4078", 41, 80000H (* 512 KiB *), 10000H (* 64 KiB *), 32);
@@ -1202,4 +1202,4 @@ BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv7MLinker 11.1.2017");
 		20000H (* 128 KiB *), 8000H (* 32 KiB *));
 	EnterSAM("SAM3S4", "ABC", 35, 200H,
 		40000H (* 256 KiB *), 0C000H (* 48 KiB *))
-END O7ARMv7MLinker.
+END O7ARMv6MLinker.
