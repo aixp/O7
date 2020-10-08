@@ -2233,7 +2233,12 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 		IF x.mode = ORB.Const THEN
 			IF x.r >= 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
 			ELSE (*imported*)
+(*
 				IF pc - fixorgP < 1000H THEN
+*)
+				IF ((-x.r) DIV 10H = 0) (* mno *)
+						& (x.a DIV 100H = 0) (* pno *)
+						& ((pc-fixorgP) DIV 1000H = 0) (* disp *) THEN
 					(* will be fixed up by linker/loader *)
 					Put3orig(BL, 7, ((-x.r) * 100H + x.a) * 1000H + pc-fixorgP);
 					fixorgP := pc-1
