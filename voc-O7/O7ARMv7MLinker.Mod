@@ -2,7 +2,7 @@ MODULE O7ARMv7MLinker;
 
 	(* Link and load on RISC; NW 20.10.2013 / 8.1.2019 *)
 
-	(* ARMv7-M: Alexander Shiryaev, 2014.10, 2015.02, 2016.06, 2017.01, 2019.11 *)
+	(* ARMv7-M: Alexander Shiryaev, 2014.10, 2015.02, 2016.06, 2017.01, 2019.11, 2021.08 *)
 
 	(*
 		TODO:
@@ -26,6 +26,12 @@ MODULE O7ARMv7MLinker;
 	CONST versionkey = 1X; MT = 6; SB = 3;
 		trace = FALSE;
 
+		(* fixup tags *)
+			tagFixup = 00FFFFFFH; (* Add/Ldr/LdrB/Str/StrB *)
+			tagVLDR = 00FFFFFCH;
+			tagBL = 00FFFFE0H;
+			tagLdrSB = 00FFFFD0H;
+
 	TYPE Module = POINTER TO ModDesc;
 		ModuleName = ARRAY 32 OF CHAR;
 
@@ -38,7 +44,7 @@ MODULE O7ARMv7MLinker;
 			code: INTEGER; (* address, relative to flash start, halfwords *)
 			entries: POINTER TO ARRAY OF INTEGER;
 				entriesLen: INTEGER;
-			imports: ARRAY 16 OF Module;
+			imports: ARRAY 255 OF Module;
 			body: INTEGER;
 			typeds: POINTER TO ARRAY OF INTEGER;
 				typedsLen: INTEGER;
@@ -185,7 +191,7 @@ MODULE O7ARMv7MLinker;
 			disp, adr, inst, pno, vno, dest, offset: INTEGER;
 			name1, impname: ModuleName;
 			F: Files.File; R: Files.Rider;
-			import: ARRAY 16 OF Module;
+			import: ARRAY 255 OF Module;
 			a, b: INTEGER;
 			op: INTEGER; (* 0: LW, 1: LB, 2: ADDS, 3: SW, 4: SB, 5: VLDR *)
 			nxt: INTEGER;
@@ -331,11 +337,12 @@ MODULE O7ARMv7MLinker;
 				adr := mod.code + fixorgP;
 				WHILE adr # mod.code DO
 					inst := flash[adr];
-					ASSERT(inst = 00FFFFFFH, 100);
+					ASSERT(inst DIV 10H * 10H = tagBL);
+					a := inst MOD 10H;
 					DEC(adr);
 					inst := flash[adr];
 					ASSERT(inst DIV 1000000H MOD 100H = 0F7H, 101); (* BL *)
-					mno := inst DIV 100000H MOD 10H;
+					mno := inst DIV 100000H MOD 10H + a * 10H;
 					pno := inst DIV 1000H MOD 100H;
 					disp := inst MOD 1000H;
 					impmod := mod.imports[mno-1];
@@ -356,7 +363,8 @@ MODULE O7ARMv7MLinker;
 					a := inst DIV 1000000H MOD 10H;
 					ASSERT(a = SB, 103);
 					ASSERT(inst DIV 10000000H MOD 10H = 8, 103); (* Ldr *)
-					ASSERT(flash[adr DIV 4 + 1] = 00FFFFFDH);
+					ASSERT(flash[adr DIV 4 + 1] DIV 10H * 10H = tagLdrSB);
+					mno := mno + flash[adr DIV 4 + 1] MOD 10H * 10H;
 
 					IF mno = 0 THEN (* global *)
 						i := adr DIV 4;
@@ -371,23 +379,23 @@ MODULE O7ARMv7MLinker;
 						b := inst DIV 100000H MOD 10H; ASSERT(b = SB, 100);
 						nxt := flash[adr DIV 4 + 3];
 						CASE inst DIV 10000000H MOD 10H OF 4:
-							ASSERT(nxt = 00FFFFFFH);
+							ASSERT(nxt = tagFixup);
 							IF inst DIV 10000H MOD 10H = 8 (* Add *) THEN op := 2
 							ELSE HALT(1)
 							END
 						| 8: (* Ldr *)
-							IF nxt = 00FFFFFFH THEN op := 0
-							ELSIF nxt = 00FFFFFCH THEN op := 5
+							IF nxt = tagFixup THEN op := 0
+							ELSIF nxt = tagVLDR THEN op := 5
 							ELSE HALT(2)
 							END
 						| 9: (* LdrB *)
-							ASSERT(nxt = 00FFFFFFH);
+							ASSERT(nxt = tagFixup);
 							op := 1
 						| 10: (* Str *)
-							ASSERT(nxt = 00FFFFFFH);
+							ASSERT(nxt = tagFixup);
 							op := 3
 						| 11: (* StrB *)
-							ASSERT(nxt = 00FFFFFFH);
+							ASSERT(nxt = tagFixup);
 							op := 4
 						END;
 
@@ -732,7 +740,7 @@ MODULE O7ARMv7MLinker;
 								Texts.WriteHex(W, inst);
 								Texts.WriteString(W, " -> ")
 							END;
-							mno := inst DIV 1000000H MOD 10H;
+							mno := inst DIV 1000000H MOD 100H;
 							vno := inst DIV 1000H MOD 1000H;
 							disp := inst MOD 1000H;
 							IF mno = 0 THEN (*global*) inst := StkOrg + mod.data + vno

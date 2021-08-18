@@ -1,6 +1,6 @@
 MODULE O7ARMv7MG; (* NW  18.4.2016 / 31.5.2019  code generator in Oberon-07 for RISC*)
 
-	(* Modified for ARMv7-M by A. V. Shiryaev, 2018.05.25, 2019.10.21 *)
+	(* Modified for ARMv7-M by A. V. Shiryaev, 2018.05.25, 2019.10.21, 2021.08.08 *)
 
 	(*
 http://www.inf.ethz.ch/personal/wirth/FPGA-relatedWork/RISC-Arch.pdf
@@ -64,6 +64,13 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 
 		maxCode = 16000; maxStrx = 2400; maxTD = 160; C24 = 1000000H;
 		Reg = 10; RegI = 11; Cond = 12;	(*internal item modes*)
+
+		(* fixup tags *)
+			tagFixup = 00FFFFFFH; (* Add/Ldr/LdrB/Str/StrB *)
+			tagBC = 00FFFFFEH;
+			tagVLDR = 00FFFFFCH;
+			tagBL = 00FFFFE0H;
+			tagLdrSB = 00FFFFD0H;
 
 	(*frequently used opcodes*)	U = 2000H; V = 1000H;
 		Mov = 0; Lsl = 1; Asr = 2; Ror= 3; And = 4; Ann = 5; Ior = 6; Xor = 7;
@@ -139,14 +146,24 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 			ASSERT(op DIV 10H = 0);
 			ASSERT(a DIV 10H = 0);
 			ASSERT(b DIV 10H = 0);
+
+			(* ASSERT(off DIV 100000H = 0); *)
+			ASSERT(off >= -80000H);
+			ASSERT(off < 80000H);
+			IF off < 0 THEN ORS.Mark("fixup not implemented") END;
+
 			armcode[pc] := ((op * 10H + a) * 10H + b) * 100000H + (off MOD 100000H); INC(pc)
 		END Put2orig;
 
 		PROCEDURE Put3orig (op, cond, off: LONGINT);
 		BEGIN (*emit branch instruction*)
 			armcode[pc] := ((op+12) * 10H + cond) * 1000000H + (off MOD 1000000H); INC(pc);
-			IF op = BC THEN (* armcode[pc] := 00FFFFFEH; INC(pc) *)
-			ELSIF op = BL THEN armcode[pc] := 00FFFFFFH; INC(pc)
+			IF op = BC THEN (* armcode[pc] := tagBC; INC(pc) *)
+			ELSIF op = BL THEN
+				ASSERT(off >= 0);
+				ASSERT(off DIV 10000000H = 0);
+				armcode[pc] := tagBL + off DIV 1000000H;
+				INC(pc)
 			ELSE HALT(1)
 			END
 		END Put3orig;
@@ -1006,7 +1023,13 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 					ASSERT(off MOD 4 = 0, 102);
 					IF a >= 100H THEN (* FPU register *)
 						DEC(a, 100H);
-						ARMv7M.EmitVSTR(armcode, pc, ER(a), ER(b), 1, off DIV 4)
+						IF off DIV 400H = 0 THEN
+							ARMv7M.EmitVSTR(armcode, pc, ER(a), ER(b), 1, off DIV 4)
+						ELSE
+							ARMv7M.EmitVMOVSPR(armcode, pc, 1, ER(a), ER(a));
+							INCL(RM, a);
+							Put20(S, op, a, b, off)
+						END
 					ELSIF (ER(a) DIV 8 = 0) & (((b = SP) & (off DIV 400H = 0)) OR ((ER(b) DIV 8 = 0) & (off DIV 4 DIV 32 = 0))) THEN
 						ARMv6M.EmitSTRIm(armcode, pc, ER(a), ER(b), off DIV 4)
 					ELSIF off < 1000H THEN
@@ -1240,10 +1263,10 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 	BEGIN
 		IF armcode[at] DIV 10000000H MOD 10H = 0EH (* BC *) THEN
 			HALT(1);
-			ASSERT(armcode[at+1] = 00FFFFFEH, 100);
+			ASSERT(armcode[at+1] = tagBC, 100);
 			armcode[at] := armcode[at] DIV C24 * C24 + (with MOD C24)
 		ELSE
-			ASSERT(armcode[at] = 00FFFFFEH, 101);
+			ASSERT(armcode[at] = tagBC, 101);
 			ASSERT(armcode[at-1] DIV 10000000H MOD 10H = 0EH, 102); (* BC *)
 			armcode[at-1] := armcode[at-1] DIV C24 * C24 + (with MOD C24)
 		END
@@ -1255,11 +1278,11 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 		WHILE L # 0 DO
 			IF armcode[L] DIV 10000000H MOD 10H = 0EH (* BC *) THEN
 				HALT(1);
-				ASSERT(armcode[L+1] = 00FFFFFEH, 100);
+				ASSERT(armcode[L+1] = tagBC, 100);
 				L1 := armcode[L] MOD 40000H;
 				fix(L, pc-L-1)
 			ELSE
-				ASSERT(armcode[L] = 00FFFFFEH, 101);
+				ASSERT(armcode[L] = tagBC, 101);
 				ASSERT(armcode[L-1] DIV 10000000H MOD 10H = 0EH, 102); (* BC *)
 				L1 := armcode[L-1] MOD 40000H;
 				fix(L, pc-L-1+1)
@@ -1273,11 +1296,11 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 	BEGIN
 		WHILE L0 # 0 DO
 			IF armcode[L0] DIV 10000000H MOD 10H = 0EH THEN (* BC *)
-				ASSERT(armcode[L0+1] = 00FFFFFEH, 101);
+				ASSERT(armcode[L0+1] = tagBC, 101);
 				L1 := armcode[L0] MOD C24;
 				armcode[L0] := armcode[L0] DIV C24 * C24 + ((dst - L0 - 1) MOD C24)
 			ELSE
-				ASSERT(armcode[L0] = 00FFFFFEH, 101);
+				ASSERT(armcode[L0] = tagBC, 101);
 				ASSERT(armcode[L0-1] DIV 10000000H MOD 10H = 0EH, 102); (* BC *)
 				L1 := armcode[L0-1] MOD C24;
 				armcode[L0-1] := armcode[L0-1] DIV C24 * C24 + ((dst - L0 - 1 + 1) MOD C24)
@@ -1293,10 +1316,10 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 			HALT(126);
 			REPEAT L2 := L3;
 			ASSERT(armcode[L2] DIV 10000000H MOD 10H = 0EH, 100); (* BC *)
-			ASSERT(armcode[L2+1] = 00FFFFFEH, 101);
+			ASSERT(armcode[L2+1] = tagBC, 101);
 			L3 := armcode[L2] MOD 40000H UNTIL L3 = 0;
 			ASSERT(armcode[L2] DIV 10000000H MOD 10H = 0EH, 102); (* BC *)
-			ASSERT(armcode[L2+1] = 00FFFFFEH, 103);
+			ASSERT(armcode[L2+1] = tagBC, 103);
 			armcode[L2] := armcode[L2] + L1; L1 := L0
 		END;
 		RETURN L1
@@ -1347,8 +1370,11 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 		IF (version # 0) & ((base # curSB) OR (base # 0)) THEN
 			(* will be fixed up by linker/loader *)
 				INCL(RM, SB);
-				Put2orig(Ldr, ER(SB), -base, pc-fixorgD); fixorgD := pc-1; curSB := base;
-				armcode[pc] := 00FFFFFDH; INC(pc)
+				IF (-base) DIV 100H = 0 (* mno *) THEN
+					Put2orig(Ldr, ER(SB), (-base) MOD 10H, pc-fixorgD); fixorgD := pc-1; curSB := base;
+					armcode[pc] := tagLdrSB + (-base) DIV 10H; INC(pc)
+				ELSE ORS.Mark("fixup impossible")
+				END
 		END
 	END GetSB;
 
@@ -1371,7 +1397,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 					ELSE GetSB(x.r);
 						INCL(RM, RH);
 						Put1orig(Add, ER(RH), ER(SB), x.a + 100H); (*mark as progbase-relative*)
-						armcode[pc] := 00FFFFFFH; INC(pc)
+						armcode[pc] := tagFixup; INC(pc)
 					END
 				(*
 				ELSIF (x.a <= 0FFFFH) & (x.a >= -10000H) THEN Put1(Mov, RH, 0, x.a)
@@ -1387,7 +1413,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 					IF x.r # 0 THEN
 						INCL(RM, RH);
 						Put2orig(op, ER(RH), ER(SB), x.a);
-						armcode[pc] := 00FFFFFFH; INC(pc);
+						armcode[pc] := tagFixup; INC(pc);
 						IF S = 1 THEN UpdateFlags(RH) END
 					ELSE Put20(S, op, RH, SB, x.a)
 					END
@@ -1426,10 +1452,15 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 					INCL(RM, RH);
 					ASSERT(x.type.size = 4, 101);
 					Put2orig(Ldr, ER(RH), ER(SB), x.a);
-					armcode[pc] := 00FFFFFCH (* VLDR *); INC(pc)
+					armcode[pc] := tagVLDR; INC(pc)
 				ELSE
 					ASSERT(x.a MOD 4 = 0, 102);
-					ARMv7M.EmitVLDR(armcode, pc, ER(RH), ER(SB), 1, x.a DIV 4)
+					IF x.a DIV 400H = 0 THEN
+						ARMv7M.EmitVLDR(armcode, pc, ER(RH), ER(SB), 1, x.a DIV 4)
+					ELSE
+						Put20(0, Ldr, RH, SB, x.a);
+						ARMv7M.EmitVMOVSPR(armcode, pc, 0, ER(RH), ER(RH))
+					END
 				END
 			END;
 			x.r := RH + 100H; incR; INCL(FR, x.r - 100H); x.mode := Reg
@@ -1455,7 +1486,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 				IF x.r # 0 THEN
 					INCL(RM, RH);
 					Put1orig(Add, ER(RH), ER(SB), x.a);
-					armcode[pc] := 00FFFFFFH; INC(pc)
+					armcode[pc] := tagFixup; INC(pc)
 				ELSE Put10(S, Add, RH, SB, x.a)
 				END
 			END;
@@ -1610,7 +1641,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 					IF x.r = 0 THEN Put0(Add, y.r, SB, y.r)
 					ELSE
 						INCL(RM, RH); Put1orig(Add, ER(RH), ER(SB), x.a);
-						armcode[pc] := 00FFFFFFH; INC(pc);
+						armcode[pc] := tagFixup; INC(pc);
 						Put0(Add, y.r, RH, y.r); x.a := 0
 					END
 				END;
@@ -1635,7 +1666,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 				IF x.r # 0 THEN
 					INCL(RM, RH);
 					Put2orig(Ldr, ER(RH), ER(SB), x.a);
-					armcode[pc] := 00FFFFFFH; INC(pc);
+					armcode[pc] := tagFixup; INC(pc);
 					UpdateFlags(RH)
 				ELSE Put2(Ldr, RH, SB, x.a)
 				END
@@ -1652,6 +1683,9 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 	PROCEDURE Q(T: ORB.Type; VAR dcw: LONGINT);
 	BEGIN (*one entry of type descriptor extension table*)
 		IF T.base # NIL THEN
+			ASSERT(T.mno DIV 100H = 0);
+			ASSERT(T.len DIV 1000H = 0);
+			ASSERT((dcw - fixorgT) DIV 1000H = 0);
 			Q(T.base, dcw); data[dcw] := (T.mno*1000H + T.len) * 1000H + dcw - fixorgT;
 			fixorgT := dcw; INC(dcw)
 		END
@@ -2054,7 +2088,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 				GetSB(x.r);
 				IF x.r # 0 THEN
 					Put2orig(op, ER(y.r), ER(SB), x.a);
-					armcode[pc] := 00FFFFFFH; INC(pc)
+					armcode[pc] := tagFixup; INC(pc)
 				ELSE Put2(op, y.r, SB, x.a)
 				END
 			END
@@ -2236,7 +2270,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 (*
 				IF pc - fixorgP < 1000H THEN
 *)
-				IF ((-x.r) DIV 10H = 0) (* mno *)
+				IF ((-x.r) DIV 100H = 0) (* mno *)
 						& (x.a DIV 100H = 0) (* pno *)
 						& ((pc-fixorgP) DIV 1000H = 0) (* disp *) THEN
 					(* will be fixed up by linker/loader *)
@@ -2291,7 +2325,7 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 		BEGIN
 			IF ORS.errcnt = 0 THEN
 				IF code[i] DIV 10000000H MOD 10H = 0EH THEN (* BC *)
-					ASSERT(code[i+1] = 00FFFFFEH, 100);
+					ASSERT(code[i+1] = tagBC, 100);
 					cond := code[i] DIV 1000000H MOD 10H;
 					off := (code[i] MOD 1000000H * 100H) DIV 100H;
 					pc0 := pc; pc := i;
