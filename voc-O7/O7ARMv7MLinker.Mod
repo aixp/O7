@@ -827,7 +827,7 @@ MODULE O7ARMv7MLinker;
 			d: INTEGER;
 	BEGIN
 		Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-		IF S.class = Texts.Name THEN
+		IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN
 			target := targets;
 			WHILE (target # NIL) & ~CmpStr(target.name, S.s) DO
 				target := target.next
@@ -948,8 +948,8 @@ MODULE O7ARMv7MLinker;
 		target.SRAMSize := SRAMSize - IAPReserve
 	END EnterNXP;
 
-	PROCEDURE EnterSTM ((*IN*) name0, fpo0, fpo1: ARRAY OF CHAR; maxExtInts, flashOrg, SRAMSize: INTEGER);
-		VAR target: Target; i, j, k: INTEGER;
+	PROCEDURE EnterSTM ((*IN*) name0, fpo0, fpo1, suffix: ARRAY OF CHAR; maxExtInts, flashOrg, SRAMSize: INTEGER);
+		VAR target: Target; i, j, k, l: INTEGER;
 	BEGIN
 		ASSERT(maxExtInts > 0, 20);
 		ASSERT(maxExtInts <= 240 (* Cortex-M4 *), 21);
@@ -965,6 +965,10 @@ MODULE O7ARMv7MLinker;
 				target.name := name0(*$*); k := StrLen(target.name);
 					target.name[k] := fpo0[i]; INC(k);
 					target.name[k] := fpo1[j]; INC(k);
+					l := 0;
+					WHILE l < StrLen(suffix) DO
+						target.name[k] := suffix[l]; INC(l); INC(k)
+					END;
 					target.name[k] := 0X;
 				target.isNXP := FALSE;
 				target.flashStart := 08000000H;
@@ -1103,98 +1107,102 @@ BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv7MLinker 11.1.2017");
 	EnterNXP("LPC4088", 41, 80000H (* 512 KiB *), 10000H (* 64 KiB *), 32);
 
 	(* 4 KiB of SRAM *)
-		EnterSTM("STM32F100", "CR", "46", 61, 200H, 1000H);
-		EnterSTM("STM32F101", "RT", "4", 60, 200H, 1000H);
-		EnterSTM("STM32F102", "CR", "4", 60, 200H, 1000H);
+		EnterSTM("STM32F100", "CR", "46", "", 61, 200H, 1000H);
+		EnterSTM("STM32F101", "RT", "4", "", 60, 200H, 1000H);
+		EnterSTM("STM32F102", "CR", "4", "", 60, 200H, 1000H);
 
 	(* 6 KiB of SRAM *)
-		EnterSTM("STM32F101", "CRT", "6", 60, 200H, 1800H);
-		EnterSTM("STM32F102", "CR", "6", 60, 200H, 1800H);
-		EnterSTM("STM32F103", "CRT", "4", 60, 200H, 1800H);
+		EnterSTM("STM32F101", "CRT", "6", "", 60, 200H, 1800H);
+		EnterSTM("STM32F102", "CR", "6", "", 60, 200H, 1800H);
+		EnterSTM("STM32F103", "CRT", "4", "", 60, 200H, 1800H);
 
 	(* 8 KiB of SRAM *)
-		EnterSTM("STM32F100", "CRV", "8B", 61, 200H, 2000H);
+		EnterSTM("STM32F100", "CRV", "8B", "", 61, 200H, 2000H);
 
 	(* 10 KiB of SRAM *)
-		EnterSTM("STM32F101", "CRTV", "8", 60, 200H, 2800H);
-		EnterSTM("STM32F102", "CR", "8", 60, 200H, 2800H);
-		EnterSTM("STM32F103", "CRT", "6", 60, 200H, 2800H);
+		EnterSTM("STM32F101", "CRTV", "8", "", 60, 200H, 2800H);
+		EnterSTM("STM32F102", "CR", "8", "", 60, 200H, 2800H);
+		EnterSTM("STM32F103", "CRT", "6", "", 60, 200H, 2800H);
 
 	(* 16 KiB of SRAM *)
-		EnterSTM("STM32F101", "CRTV", "B", 60, 200H, 4000H);
-		EnterSTM("STM32F102", "CR", "B", 60, 200H, 4000H);
-		EnterSTM("STM32F301", "CKR", "68", 82, 200H, 4000H);
-		EnterSTM("STM32F302", "CKR", "68", 82, 200H, 4000H);
-		EnterSTM("STM32F303", "CKR", "68", 82, 200H, 4000H);
+		EnterSTM("STM32F101", "CRTV", "B", "", 60, 200H, 4000H);
+		EnterSTM("STM32F102", "CR", "B", "", 60, 200H, 4000H);
+		EnterSTM("STM32F301", "CKR", "68", "", 82, 200H, 4000H);
+		EnterSTM("STM32F302", "CKR", "68", "", 82, 200H, 4000H);
+		EnterSTM("STM32F303", "CKR", "68", "", 82, 200H, 4000H);
+
+		EnterSTM("STM32L151", "CR", "6", "-A", 45, 200H, 4000H);
 
 	(* 20 KiB of SRAM *)
-		EnterSTM("STM32F103", "CRTV", "8B", 60, 200H, 5000H);
+		EnterSTM("STM32F103", "CRTV", "8B", "", 60, 200H, 5000H);
 
 	(* 24 KiB of SRAM *)
-		EnterSTM("STM32F100", "RVZ", "C", 61, 200H, 6000H);
+		EnterSTM("STM32F100", "RVZ", "C", "", 61, 200H, 6000H);
 
 	(* 32 KiB of SRAM *)
-		EnterSTM("STM32F100", "RVZ", "DE", 61, 200H, 8000H);
-		EnterSTM("STM32F101", "RVZ", "C", 60, 200H, 8000H);
-		EnterSTM("STM32F302", "CRV", "B", 85, 200H, 8000H);
+		EnterSTM("STM32F100", "RVZ", "DE", "", 61, 200H, 8000H);
+		EnterSTM("STM32F101", "RVZ", "C", "", 60, 200H, 8000H);
+		EnterSTM("STM32F302", "CRV", "B", "", 85, 200H, 8000H);
+
+		EnterSTM("STM32L151", "CRV", "8B", "-A", 45, 200H, 8000H);
 
 	(* 40 KiB of SRAM *)
-		EnterSTM("STM32F302", "CRV", "C", 85, 200H, 0A000H);
-		EnterSTM("STM32F303", "CRV", "B", 85, 200H, 0A000H);
+		EnterSTM("STM32F302", "CRV", "C", "", 85, 200H, 0A000H);
+		EnterSTM("STM32F303", "CRV", "B", "", 85, 200H, 0A000H);
 
 	(* 48 KiB of SRAM *)
-		EnterSTM("STM32F101", "RVZ", "DE", 60, 200H, 0C000H);
-		EnterSTM("STM32F103", "RVZ", "C", 60, 200H, 0C000H);
-		EnterSTM("STM32F303", "CRV", "C", 85, 200H, 0C000H);
+		EnterSTM("STM32F101", "RVZ", "DE", "", 60, 200H, 0C000H);
+		EnterSTM("STM32F103", "RVZ", "C", "", 60, 200H, 0C000H);
+		EnterSTM("STM32F303", "CRV", "C", "", 85, 200H, 0C000H);
 
 	(* 64 KiB of SRAM *)
-		EnterSTM("STM32F103", "RVZ", "DE", 60, 200H, 10000H);
-		EnterSTM("STM32F105", "RV", "8BC", 68, 200H, 10000H);
-		EnterSTM("STM32F107", "RV", "BC", 68, 200H, 10000H);
-		EnterSTM("STM32F302", "RVZ", "DE", 85, 200H, 10000H);
-		EnterSTM("STM32F401", "CRV", "BC", 85, 200H, 10000H);
+		EnterSTM("STM32F103", "RVZ", "DE", "", 60, 200H, 10000H);
+		EnterSTM("STM32F105", "RV", "8BC", "", 68, 200H, 10000H);
+		EnterSTM("STM32F107", "RV", "BC", "", 68, 200H, 10000H);
+		EnterSTM("STM32F302", "RVZ", "DE", "", 85, 200H, 10000H);
+		EnterSTM("STM32F401", "CRV", "BC", "", 85, 200H, 10000H);
 
 (* memory hole?
 	(* 48+16 KiB of SRAM *)
-		EnterSTM("STM32F205", "RV", "B", 81, 200H, 10000H);
+		EnterSTM("STM32F205", "RV", "B", "", 81, 200H, 10000H);
 *)
 
 	(* 80 KiB of SRAM *)
-		EnterSTM("STM32F101", "RVZ", "FG", 60, 200H, 14000H);
-		EnterSTM("STM32F303", "RVZ", "DE", 85, 200H, 14000H);
+		EnterSTM("STM32F101", "RVZ", "FG", "", 60, 200H, 14000H);
+		EnterSTM("STM32F303", "RVZ", "DE", "", 85, 200H, 14000H);
 
 	(* 96 KiB of SRAM *)
-		EnterSTM("STM32F103", "RVZ", "FG", 60, 200H, 18000H);
-		EnterSTM("STM32F401", "CRV", "DE", 85, 200H, 18000H);
+		EnterSTM("STM32F103", "RVZ", "FG", "", 60, 200H, 18000H);
+		EnterSTM("STM32F401", "CRV", "DE", "", 85, 200H, 18000H);
 
 (* memory hole?
 	(* 80+16 KiB of SRAM *)
-		EnterSTM("STM32F205", "RVZ", "C", 81, 200H, 18000H);
+		EnterSTM("STM32F205", "RVZ", "C", "", 81, 200H, 18000H);
 *)
 
 	(* 128 KiB of SRAM *)
-		EnterSTM("STM32F411", "CRV", "CE", 86, 200H, 20000H);
+		EnterSTM("STM32F411", "CRV", "CE", "", 86, 200H, 20000H);
 
 	(* 112+16 KiB of SRAM *)
-		EnterSTM("STM32F205", "RVZ", "EFG", 81, 200H, 20000H);
-		EnterSTM("STM32F207", "IVZ", "CEFG", 81, 200H, 20000H);
-		EnterSTM("STM32F215", "RVZ", "EG", 81, 200H, 20000H);
-		EnterSTM("STM32F217", "IVZ", "EG", 81, 200H, 20000H);
-		EnterSTM("STM32F405", "O", "E", 82, 200H, 20000H);
-		EnterSTM("STM32F405", "ORVZ", "G", 82, 200H, 20000H);
-		EnterSTM("STM32F407", "IVZ", "EG", 82, 200H, 20000H);
-		EnterSTM("STM32F415", "ORVZ", "G", 82, 200H, 20000H);
-		EnterSTM("STM32F417", "IVZ", "EG", 82, 200H, 20000H);
-		EnterSTM("STM32F446", "MRVZ", "CE", 97, 200H, 20000H);
+		EnterSTM("STM32F205", "RVZ", "EFG", "", 81, 200H, 20000H);
+		EnterSTM("STM32F207", "IVZ", "CEFG", "", 81, 200H, 20000H);
+		EnterSTM("STM32F215", "RVZ", "EG", "", 81, 200H, 20000H);
+		EnterSTM("STM32F217", "IVZ", "EG", "", 81, 200H, 20000H);
+		EnterSTM("STM32F405", "O", "E", "", 82, 200H, 20000H);
+		EnterSTM("STM32F405", "ORVZ", "G", "", 82, 200H, 20000H);
+		EnterSTM("STM32F407", "IVZ", "EG", "", 82, 200H, 20000H);
+		EnterSTM("STM32F415", "ORVZ", "G", "", 82, 200H, 20000H);
+		EnterSTM("STM32F417", "IVZ", "EG", "", 82, 200H, 20000H);
+		EnterSTM("STM32F446", "MRVZ", "CE", "", 97, 200H, 20000H);
 
 	(* 112+16+64 KiB of SRAM *)
-		EnterSTM("STM32F427", "IVZ", "GI", 91, 200H, 30000H);
-		EnterSTM("STM32F429", "BINVZ", "EGI", 91, 200H, 30000H);
-		EnterSTM("STM32F437", "IVZ", "GI", 91, 200H, 30000H);
-		EnterSTM("STM32F439", "BINVZ", "GI", 91, 200H, 30000H);
+		EnterSTM("STM32F427", "IVZ", "GI", "", 91, 200H, 30000H);
+		EnterSTM("STM32F429", "BINVZ", "EGI", "", 91, 200H, 30000H);
+		EnterSTM("STM32F437", "IVZ", "GI", "", 91, 200H, 30000H);
+		EnterSTM("STM32F439", "BINVZ", "GI", "", 91, 200H, 30000H);
 
 	(* 64 KiB (DTCM) + 240 KiB (SRAM1) + 16 KiB (SRAM2) *)
-		EnterSTM("STM32F756", "BINVZ", "EG",
+		EnterSTM("STM32F756", "BINVZ", "EG", "",
 			240 (* FIXME *), (16 + 240) * 4 (* FIXME *), 50000H);
 
 	EnterCC1310("CC1310F32", 8000H (* 32 KiB *), 4000H (* 16 KiB *));
