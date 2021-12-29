@@ -1065,7 +1065,7 @@ MODULE O7ARMv7MLinker;
 		END
 	END EnterSAM;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv7MLinker 11.1.2017");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv7MLinker 27.12.2021");
 	Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
 
 	targets := NIL;
@@ -1203,7 +1203,47 @@ BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv7MLinker 11.1.2017");
 
 	(* 64 KiB (DTCM) + 240 KiB (SRAM1) + 16 KiB (SRAM2) *)
 		EnterSTM("STM32F756", "BINVZ", "EG", "",
-			240 (* FIXME *), (16 + 240) * 4 (* FIXME *), 50000H);
+			98, (16 + 240) * 4 (* FIXME *), 50000H);
+
+	(* 128 KiB (DTCM) *)
+		EnterSTM("STM32H723", "VZ", "EG", "",
+			163, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H725", "AIRVZ", "EG", "",
+			163, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H730", "AIVZ", "B", "",
+			163, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H733", "VZ", "G", "",
+			163, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H735", "AIRVZ", "G", "",
+			163, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H742", "ABIVXZ", "GI", "",
+			150, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H743", "ABIVXZ", "GI", "",
+			150, (16 + 240) * 4, 20000H);
+		(*
+		EnterSTM("STM32H745", "BIXZ", "GI", "",
+			150, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H747", "ABIX", "GI", "",
+			150, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H747", "Z", "I", "",
+			150, (16 + 240) * 4, 20000H);
+		*)
+		EnterSTM("STM32H750", "IVXZ", "B", "",
+			150, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H753", "ABIVXZ", "I", "",
+			150, (16 + 240) * 4, 20000H);
+		(*
+		EnterSTM("STM32H755", "BIXZ", "I", "",
+			150, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H757", "ABIXZ", "I", "",
+			150, (16 + 240) * 4, 20000H);
+		*)
+		EnterSTM("STM32H7A3", "AILNRVZ", "IG", "",
+			155, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H7B3", "AILNRVZ", "I", "",
+			155, (16 + 240) * 4, 20000H);
+		EnterSTM("STM32H7B0", "AIRVZ", "B", "",
+			155, (16 + 240) * 4, 20000H);
 
 	EnterCC1310("CC1310F32", 8000H (* 32 KiB *), 4000H (* 16 KiB *));
 	EnterCC1310("CC1310F64", 10000H (* 64 KiB *), 4000H (* 16 KiB *));
