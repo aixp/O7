@@ -396,7 +396,7 @@ MODULE O7ARMv6MLinker;
 
 			ELSIF res >= 3 THEN COPY(name, importing);
 			WHILE nofimps > 0 DO DEC(nofimps) END
-			END 
+			END
 		END;
 		newmod := mod
 	END Load;
@@ -457,7 +457,7 @@ MODULE O7ARMv6MLinker;
 		IF F # NIL THEN
 			Files.Set(R, F, 0);
 			r := 0;
-			
+
 			IF codeLen > 0 THEN
 				offset := startAdr MOD 10000H;
 				startAdr := startAdr DIV 10000H MOD 10000H;
@@ -1017,15 +1017,29 @@ MODULE O7ARMv6MLinker;
 		END
 	END EnterSAM;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv6MLinker 11.1.2017");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv6MLinker 7.3.2023");
 	Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
 
 	targets := NIL;
 
-	EnterNXP("LPC1114FBD48302", 32 (* Cortex-M0 *),
-		8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
-	EnterNXP("LPC1115", 32 (* Cortex-M0 *),
-		10000H (* 64 KiB *), 2000H (* 8 KiB *), 32);
+	(* LPC1114 *)
+		EnterNXP("LPC1114FHN33301", 32 (* Cortex-M0 *),
+			8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
+		EnterNXP("LPC1114FHN33302", 32 (* Cortex-M0 *),
+			8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
+		EnterNXP("LPC1114FHN33303", 32 (* Cortex-M0 *),
+			8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
+
+		EnterNXP("LPC1114FBD48301", 32 (* Cortex-M0 *),
+			8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
+		EnterNXP("LPC1114FBD48302", 32 (* Cortex-M0 *),
+			8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
+		EnterNXP("LPC1114FBD48303", 32 (* Cortex-M0 *),
+			8000H (* 32 KiB *), 2000H (* 8 KiB *), 32);
+
+	(* LPC1115 *)
+		EnterNXP("LPC1115", 32 (* Cortex-M0 *),
+			10000H (* 64 KiB *), 2000H (* 8 KiB *), 32);
 
 	(* 4 KiB of SRAM *)
 		EnterSTM("STM32F030", "CK", "6", 32, 200H, 1000H);
@@ -1088,7 +1102,7 @@ BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OARMv6MLinker 11.1.2017");
 	EnterNXP("LPC1788", 41, 80000H (* 512 KiB *), 10000H (* 64 KiB *), 32);
 
 	(* no FPU *)
-		EnterNXP("LPC4072", 41, 10000H (* 64 KiB *), 4000H (* 16 KiB *), 32); 
+		EnterNXP("LPC4072", 41, 10000H (* 64 KiB *), 4000H (* 16 KiB *), 32);
 		EnterNXP("LPC4074", 41, 20000H (* 128 KiB *), 8000H (* 32 KiB *), 32);
 	EnterNXP("LPC4076", 41, 40000H (* 256 KiB *), 10000H (* 64 KiB *), 32);
 	EnterNXP("LPC4078", 41, 80000H (* 512 KiB *), 10000H (* 64 KiB *), 32);
