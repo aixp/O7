@@ -1,6 +1,6 @@
 MODULE O7ARMv7MG; (* NW  18.4.2016 / 31.5.2019  code generator in Oberon-07 for RISC*)
 
-	(* Modified for ARMv7-M by A. V. Shiryaev, 2018.05.25, 2019.10.21, 2021.08.08 *)
+	(* Modified for ARMv7-M by A. V. Shiryaev, 2018.05.25, 2019.10.21, 2021.08.08, 2023.06.21 *)
 
 	(*
 http://www.inf.ethz.ch/personal/wirth/FPGA-relatedWork/RISC-Arch.pdf
@@ -2263,6 +2263,11 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 	END PrepCall;
 
 	PROCEDURE Call*(VAR x: Item; r: LONGINT);
+		CONST check = FALSE;
+			(* is not necessary:
+					HardFault trap (with pc=0) will occur,
+					because no Thumb flag in initialSP
+			*)
 	BEGIN (*x.type.form = ORB.Proc*)
 		IF x.mode = ORB.Const THEN
 			IF x.r >= 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
@@ -2280,10 +2285,12 @@ http://infocenter.arm.com/help/topic/com.arm.doc.ddi0439d/DDI0439D_cortex_m4_pro
 				END
 			END
 		ELSE
-			IF x.mode <= ORB.Par THEN load(x); DEC(RH)
+			IF x.mode <= ORB.Par THEN
+				IF check THEN load(x) ELSE load0(0, x) END;
+				DEC(RH)
 			ELSE
 				Put20(0, Ldr, RH, SP, 0); Put10(0, Add, SP, SP, 4);
-				Put1(Cmp, RH, RH, 0);
+				IF check THEN Put1(Cmp, RH, RH, 0) END;
 				DEC(r); DEC(frame, 4)
 			END;
 			IF check THEN Trap(EQ, 5) END;

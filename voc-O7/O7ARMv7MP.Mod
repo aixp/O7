@@ -1006,7 +1006,7 @@ MODULE O7ARMv7MP; (*N. Wirth 1.7.97 / 8.2.2020	Oberon compiler for RISC in Obero
 		(*Oberon.Collect(0)*)
 	END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "Oberon -> ARMv7-M Compiler  8.2.2020");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "Oberon -> ARMv7-M Compiler  21.6.2023");
 	Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
 	NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
 	expression := expression0; Type := Type0; FormalType := FormalType0
