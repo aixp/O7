@@ -65,7 +65,7 @@ MODULE O7ARMv6MLinker;
 		flash: ARRAY 200000H DIV 2 OF INTEGER; flashW: INTEGER;
 		memW: INTEGER; (* bytes *)
 		nPtrs: INTEGER;
-		res: INTEGER;
+		res*: INTEGER;
 		importing, imported: ModuleName;
 
 		W: Texts.Writer;
@@ -781,7 +781,7 @@ MODULE O7ARMv6MLinker;
 			S: Texts.Scanner;
 			mod: Module;
 			d: INTEGER;
-	BEGIN
+	BEGIN res := 0;
 		Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
 		IF S.class = Texts.Name THEN
 			target := targets;
