@@ -1,3 +1,5 @@
+.PHONY: all clean
+
 all: O7ARMv6MPCompile O7ARMv7MPCompile O7ARMv7MToolDecObj O7ARMv7MToolDecSym O7ARMv7MToolDecBin O7ARMv7MToolDecHex O7ARMv6MLinkerLink O7ARMv7MLinkerLink
 
 O7ARMv6MPCompile: O7ARMv6MP.o O7ARMv6MPCompile.Mod SYSTEM.h
