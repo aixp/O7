@@ -78,9 +78,13 @@ MODULE O7S; (* NW 19.9.93 / 20.3.2017	Scanner in Oberon-07*)
 
 	PROCEDURE Identifier (VAR sym: INTEGER);
 		VAR i, k: INTEGER;
+			err: BOOLEAN;
 	BEGIN i := 0;
+		err := FALSE;
 		REPEAT
-			IF i < IdLen-1 THEN id[i] := ch; INC(i) END ;
+			IF i < IdLen-1 THEN id[i] := ch; INC(i)
+			ELSIF ~err THEN err := TRUE; Mark("identifier too long")
+			END;
 			Texts.Read(R, ch)
 		UNTIL (ch < "0") OR (ch > "9") & (ch < "A") OR (ch > "Z") & (ch < "a") OR (ch > "z");
 		id[i] := 0X;
