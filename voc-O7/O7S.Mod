@@ -280,7 +280,9 @@ MODULE O7S; (* NW 19.9.93 / 20.3.2017	Scanner in Oberon-07*)
 	END Init;
 
 	PROCEDURE EnterKW (sym: INTEGER; (*IN*) name: ARRAY OF CHAR);
-	BEGIN keyTab[k].id := name; keyTab[k].sym := sym; INC(k)
+	BEGIN
+		(* keyTab[k].id := name; *) COPY(name, keyTab[k].id);
+		keyTab[k].sym := sym; INC(k)
 	END EnterKW;
 
 BEGIN Texts.OpenWriter(W); k := 0; KWX[0] := 0; KWX[1] := 0;

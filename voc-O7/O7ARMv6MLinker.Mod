@@ -882,7 +882,7 @@ MODULE O7ARMv6MLinker;
 		(*Oberon.Collect(0)*)
 	END Link;
 
-	PROCEDURE EnterNXP ((*IN*) name: TargetName; maxExtInts, flashSize, SRAMSize, IAPReserve: INTEGER);
+	PROCEDURE EnterNXP ((*IN*) name: ARRAY OF CHAR; maxExtInts, flashSize, SRAMSize, IAPReserve: INTEGER);
 		VAR target: Target;
 	BEGIN
 		ASSERT(maxExtInts > 0, 20);
@@ -891,7 +891,7 @@ MODULE O7ARMv6MLinker;
 		ASSERT(SRAMSize MOD 4 = 0, 23);
 
 		NEW(target); target.next := targets; targets := target;
-		target.name := name;
+		(* target.name := name; *) COPY(name, target.name);
 		target.isNXP := TRUE;
 		target.flashStart := 0;
 		target.maxExtInts := maxExtInts;
@@ -918,7 +918,7 @@ MODULE O7ARMv6MLinker;
 			j := 0;
 			WHILE j < StrLen(fpo1) DO
 				NEW(target); target.next := targets; targets := target;
-				target.name := name0(*$*); k := StrLen(target.name);
+				(* target.name := name0(*$*); *) COPY(name0, target.name); k := StrLen(target.name);
 					target.name[k] := fpo0[i]; INC(k);
 					target.name[k] := fpo1[j]; INC(k);
 					target.name[k] := 0X;
@@ -947,7 +947,7 @@ MODULE O7ARMv6MLinker;
 	END EnterSTM;
 
 	(* Cortex-M3 *)
-	PROCEDURE EnterCC1310 ((*IN*) name: TargetName; flashSize, SRAMSize: INTEGER);
+	PROCEDURE EnterCC1310 ((*IN*) name: ARRAY OF CHAR; flashSize, SRAMSize: INTEGER);
 		CONST
 			maxExtInts = 34;
 			CCFGSize = 88;
@@ -956,7 +956,7 @@ MODULE O7ARMv6MLinker;
 		ASSERT(SRAMSize MOD 4 = 0, 21);
 
 		NEW(target); target.next := targets; targets := target;
-		target.name := name;
+		(* target.name := name; *) COPY(name, target.name);
 		target.isNXP := FALSE;
 		target.flashStart := 0;
 		target.maxExtInts := maxExtInts;
@@ -967,7 +967,7 @@ MODULE O7ARMv6MLinker;
 	END EnterCC1310;
 
 	(* Cortex-M3 *)
-	PROCEDURE EnterLM3S ((*IN*) name: TargetName; flashSize, SRAMSize: INTEGER; maxExtInts: INTEGER);
+	PROCEDURE EnterLM3S ((*IN*) name: ARRAY OF CHAR; flashSize, SRAMSize: INTEGER; maxExtInts: INTEGER);
 	BEGIN
 		ASSERT(flashSize MOD 4 = 0, 20);
 		ASSERT(SRAMSize MOD 4 = 0, 21);
@@ -975,7 +975,7 @@ MODULE O7ARMv6MLinker;
 		ASSERT(maxExtInts <= 240 (* Cortex-M4 *), 23);
 
 		NEW(target); target.next := targets; targets := target;
-		target.name := name;
+		(* target.name := name; *) COPY(name, target.name);
 		target.isNXP := FALSE;
 		target.flashStart := 0;
 		target.maxExtInts := maxExtInts;
@@ -1003,7 +1003,7 @@ MODULE O7ARMv6MLinker;
 		i := 0;
 		WHILE i < StrLen(fpo0) DO
 			NEW(target); target.next := targets; targets := target;
-			target.name := name0(*$*); k := StrLen(target.name);
+			(* target.name := name0(*$*); *) COPY(name0, target.name); k := StrLen(target.name);
 				target.name[k] := fpo0[i]; INC(k);
 				target.name[k] := 0X;
 			target.isNXP := FALSE;
