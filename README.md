@@ -10,6 +10,4 @@ Oberon → ARMv{6,7E}-M compiler, based on N. Wirth [Project Oberon](http://
 
 [Some notes](https://wiki.oberon.org/ob/o7) (in Russian)
 
-Alexander Shiryaev, 2024
-
-[License](BlackBox/O7/Docu/license.txt)
+Alexander Shiryaev, 2025
